@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>古诗文知识图谱可视化</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+    <!-- 配置Tailwind自定义主题 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36CFC9',
+                        accent: '#722ED1',
+                        neutral: '#1F2937',
+                        "neutral-light": '#F5F7FA'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .graph-container {
+                height: calc(100vh - 120px);
+            }
+            .entity-tag {
+                @apply inline-block px-2 py-1 text-xs rounded-full mr-1 mb-1;
+            }
+        }
+        .fa {
+              display: inline-block !important;
+              font: normal normal normal 14px/1 FontAwesome !important;
+            }
+    </style>
+</head>
+<body class="bg-neutral-light font-sans">
+    <!-- 顶部导航 -->
+    <header class="bg-white shadow-md">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-book text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold text-neutral">古诗文知识图谱可视化</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="refresh-btn" class="flex items-center space-x-1 px-3 py-1.5 bg-primary text-white rounded-md hover:bg-primary/90 transition">
+                    <i class="fa fa-refresh"></i>
+                    <span>刷新图谱</span>
+                </button>
+                <button id="fullscreen-btn" class="flex items-center space-x-1 px-3 py-1.5 bg-white border border-primary text-primary rounded-md hover:bg-primary/10 transition">
+                    <i class="fa fa-expand"></i>
+                    <span>全屏查看</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 控制面板和可视化区域 -->
+    <div class="container mx-auto px-4 py-6">
+        <!-- 在header标签后添加搜索区域 -->
+        <div class="container mx-auto px-4 py-3 bg-white shadow-sm">
+            <div class="flex">
+                <input type="text" id="entity-search"
+                       placeholder="搜索实体（作者、诗文、名句等）..."
+                       class="flex-1 px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-primary/50">
+                <button id="search-btn" class="px-6 py-2 bg-primary text-white rounded-r-md hover:bg-primary/90 transition flex items-center">
+                    <i class="fa fa-search mr-2"></i>搜索
+                </button>
+            </div>
+            <!-- 搜索结果展示区域 -->
+            <div id="search-results" class="mt-2 absolute z-10 bg-white shadow-lg rounded-md w-[calc(100%-2rem)] max-h-60 overflow-y-auto hidden">
+                <div id="results-list" class="p-2">
+                    <!-- 搜索结果将动态插入这里 -->
+                </div>
+                <div id="no-results" class="p-4 text-center text-gray-500 hidden">
+                    未找到匹配的实体
+                </div>
+            </div>
+        </div>
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- 左侧控制面板 -->
+            <div class="w-full lg:w-1/4 bg-white rounded-lg shadow-md p-4">
+                <h2 class="text-lg font-semibold mb-4 flex items-center">
+                    <i class="fa fa-filter text-primary mr-2"></i>筛选条件
+                </h2>
+                <div class="space-y-4">
+                    <!-- 实体类型筛选 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">实体类型</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center space-x-2 p-2 border rounded-md hover:bg-neutral-light cursor-pointer">
+                                <input type="checkbox" class="form-checkbox text-primary entity-checkbox" value="作者实体" checked>
+                                <span>作者</span>
+                            </label>
+                            <label class="flex items-center space-x-2 p-2 border rounded-md hover:bg-neutral-light cursor-pointer">
+                                <input type="checkbox" class="form-checkbox text-primary entity-checkbox" value="诗文实体" >
+                                <span>诗文</span>
+                            </label>
+                            <label class="flex items-center space-x-2 p-2 border rounded-md hover:bg-neutral-light cursor-pointer">
+                                <input type="checkbox" class="form-checkbox text-primary entity-checkbox" value="朝代实体" >
+                                <span>朝代</span>
+                            </label>
+                            <label class="flex items-center space-x-2 p-2 border rounded-md hover:bg-neutral-light cursor-pointer">
+                                <input type="checkbox" class="form-checkbox text-primary entity-checkbox" value="名句实体" >
+                                <span>名句</span>
+                            </label>
+                            <label class="flex items-center space-x-2 p-2 border rounded-md hover:bg-neutral-light cursor-pointer">
+                                <input type="checkbox" class="form-checkbox text-primary entity-checkbox" value="形式实体" >
+                                <span>形式</span>
+                            </label>
+                            <label class="flex items-center space-x-2 p-2 border rounded-md hover:bg-neutral-light cursor-pointer">
+                                <input type="checkbox" class="form-checkbox text-primary entity-checkbox" value="主题实体" >
+                                <span>主题</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 关系类型筛选 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">关系类型</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center space-x-2 p-2 border rounded-md hover:bg-neutral-light cursor-pointer">
+                                <input type="checkbox" class="form-checkbox text-primary relationship-checkbox" value="创作" >
+                                <span>创作</span>
+                            </label>
+                            <label class="flex items-center space-x-2 p-2 border rounded-md hover:bg-neutral-light cursor-pointer">
+                                <input type="checkbox" class="form-checkbox text-primary relationship-checkbox" value="活跃于" >
+                                <span>活跃于</span>
+                            </label>
+                            <label class="flex items-center space-x-2 p-2 border rounded-md hover:bg-neutral-light cursor-pointer">
+                                <input type="checkbox" class="form-checkbox text-primary relationship-checkbox" value="具有主题" >
+                                <span>具有主题</span>
+                            </label>
+                            <label class="flex items-center space-x-2 p-2 border rounded-md hover:bg-neutral-light cursor-pointer">
+                                <input type="checkbox" class="form-checkbox text-primary relationship-checkbox" value="名句归属于" >
+                                <span>名句归属</span>
+                            </label>
+                            <label class="flex items-center space-x-2 p-2 border rounded-md hover:bg-neutral-light cursor-pointer">
+                                <input type="checkbox" class="form-checkbox text-primary relationship-checkbox" value="属于形式" >
+                                <span>属于形式</span>
+                            </label>
+                        </div>
+                    </div>
+                        <!-- 一键全不选按钮 -->
+                        <button id="deselect-all-btn" class="w-full py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition flex items-center justify-center">
+                            <i class="fa fa-times mr-2"></i>全不选
+                        </button>
+                    <!-- 节点数量控制 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            节点数量: <span id="node-count-display">100</span>
+                        </label>
+                        <input type="range" min="50" max="1000" value="100" step="10"
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
+                               id="node-count-slider">
+                    </div>
+
+                    <!-- API地址配置 -->
+<!--                    <div>-->
+<!--                        <label class="block text-sm font-medium text-gray-700 mb-1">API地址</label>-->
+<!--                        <input type="text" value="http://localhost:5000/api/knowledge-graph"-->
+<!--                               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"-->
+<!--                               id="api-url">-->
+<!--                        <p class="text-xs text-gray-500 mt-1">默认后端API地址，根据实际部署情况修改</p>-->
+<!--                    </div>-->
+
+                    <!-- 查询按钮 -->
+                    <button id="query-btn" class="w-full py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition flex items-center justify-center">
+                        <i class="fa fa-search mr-2"></i>查询知识图谱
+                    </button>
+                </div>
+
+                <!-- 统计信息 -->
+                <div class="mt-6 pt-4 border-t border-gray-200">
+                    <h3 class="text-sm font-semibold mb-3 text-gray-600">统计信息</h3>
+                    <div class="grid grid-cols-2 gap-3 text-center">
+                        <div class="bg-neutral-light p-3 rounded-lg">
+                            <p class="text-xs text-gray-500">总节点数</p>
+                            <p class="text-xl font-bold text-primary" id="total-nodes">0</p>
+                        </div>
+                        <div class="bg-neutral-light p-3 rounded-lg">
+                            <p class="text-xs text-gray-500">总关系数</p>
+                            <p class="text-xl font-bold text-accent" id="total-links">0</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- 知识问答区域 -->
+                <div class="mt-6 pt-4 border-t border-gray-200">
+                    <h3 class="text-sm font-semibold mb-3 text-gray-600">知识问答</h3>
+                    <div class="space-y-2">
+                        <input type="text" id="question-input"
+                               placeholder="请输入问题，例如：李白写过哪些关于月亮的诗？"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                        <button id="answer-btn" class="w-full py-2 bg-accent text-white rounded-md hover:bg-accent/90 transition flex items-center justify-center">
+                            <i class="fa fa-comment mr-2"></i>获取答案
+                        </button>
+                        <div id="answer-result" class="mt-2 p-3 bg-neutral-light rounded-md max-h-40 overflow-y-auto hidden">
+                            <h4 class="font-medium mb-1">答案：</h4>
+                            <pre id="answer-content" class="text-sm whitespace-pre-wrap"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧可视化区域 -->
+            <div class="w-full lg:w-3/4">
+                <div class="bg-white rounded-lg shadow-md p-4 h-full flex flex-col">
+                    <!-- 信息面板 -->
+                    <div id="info-panel" class="mb-4 p-4 bg-neutral-light rounded-md hidden">
+                        <h3 id="info-title" class="text-lg font-semibold mb-2"></h3>
+                        <div id="info-content" class="space-y-2 text-sm"></div>
+                    </div>
+
+                    <!-- 知识图谱容器 -->
+                    <div id="graph-container" class="graph-container w-full rounded-md border border-gray-200"></div>
+
+                    <!-- 操作提示 -->
+                    <div class="mt-3 text-xs text-gray-500 flex justify-between">
+                        <div>
+                            <span class="mr-3"><i class="fa fa-mouse-pointer mr-1"></i>拖拽节点</span>
+                            <span class="mr-3"><i class="fa fa-search-plus mr-1"></i>滚轮缩放</span>
+                            <span><i class="fa fa-arrows mr-1"></i>拖拽画布</span>
+                        </div>
+                        <div id="loading-status" class="hidden"><i class="fa fa-spinner fa-spin mr-1"></i>加载中...</div>
+                        <div id="error-status" class="hidden text-red-500"><i class="fa fa-exclamation-circle mr-1"></i>加载失败</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 实体样式映射
+        const entityStyles = {
+            '作者实体': { color: '#165DFF' },
+            '诗文实体': { color: '#722ED1' },
+            '朝代实体': { color: '#F53F3F' },
+            '名句实体': { color: '#FF7D00' },
+            '形式实体': { color: '#0FC6C2' },
+            '主题实体': { color: '#7BC616' }
+        };
+
+        // 关系与对应实体的映射
+        const relationshipEntityMap = {
+            '创作': ['作者实体', '诗文实体'],
+            '活跃于': ['作者实体', '朝代实体'],
+            '具有主题': ['诗文实体', '主题实体'],
+            '名句归属于': ['名句实体', '诗文实体'],
+            '属于形式': ['诗文实体', '形式实体']
+        };
+
+        // 初始化ECharts实例
+        const chartDom = document.getElementById('graph-container');
+        const myChart = echarts.init(chartDom);
+        let graphData = { nodes: [], links: [] };
+
+        // 设置默认 API 地址
+        const apiUrl = "http://localhost:5000/api/knowledge-graph";
+        // 节点数量滑块事件
+        document.getElementById('node-count-slider').addEventListener('input', function() {
+            document.getElementById('node-count-display').textContent = this.value;
+        });
+
+        // 刷新按钮事件
+        document.getElementById('refresh-btn').addEventListener('click', function() {
+            loadKnowledgeGraph();
+        });
+
+        // 查询按钮事件
+        document.getElementById('query-btn').addEventListener('click', function() {
+            loadKnowledgeGraph();
+        });
+
+        // 全屏按钮事件
+        document.getElementById('fullscreen-btn').addEventListener('click', function() {
+            if (!document.fullscreenElement) {
+                chartDom.requestFullscreen().catch(err => {
+                    console.error(`全屏请求错误: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        });
+
+        // 关系选择框事件 - 选择关系时自动选中相关实体
+        document.querySelectorAll('.relationship-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    const entities = relationshipEntityMap[this.value];
+                    entities.forEach(entity => {
+                        document.querySelector(`.entity-checkbox[value="${entity}"]`).checked = true;
+                    });
+                }
+            });
+        });
+
+        // 实体选择框事件 - 检查是否被已选关系依赖
+        document.querySelectorAll('.entity-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                if (!this.checked) {
+                    // 检查是否有已选关系依赖此实体
+                    const entityValue = this.value;
+                    let dependentRelationships = [];
+
+                    for (const [rel, entities] of Object.entries(relationshipEntityMap)) {
+                        if (entities.includes(entityValue) &&
+                            document.querySelector(`.relationship-checkbox[value="${rel}"]`).checked) {
+                            dependentRelationships.push(rel);
+                        }
+                    }
+
+                    if (dependentRelationships.length > 0) {
+                        // 取消选择相关关系
+                        dependentRelationships.forEach(rel => {
+                            document.querySelector(`.relationship-checkbox[value="${rel}"]`).checked = false;
+                        });
+
+                        // alert(`已自动取消选择依赖"${this.parentElement.querySelector('span').textContent}"的关系: ${dependentRelationships.join('、')}`);
+                    }
+                }
+            });
+        });
+
+        // 一键全不选按钮事件
+        document.getElementById('deselect-all-btn').addEventListener('click', function() {
+            // 取消所有实体的选中状态
+            document.querySelectorAll('.entity-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+
+            // 取消所有关系的选中状态
+            document.querySelectorAll('.relationship-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        });
+
+        // 问答功能
+        document.getElementById('answer-btn').addEventListener('click', function() {
+            const question = document.getElementById('question-input').value.trim();
+            if (!question) return;
+
+            const resultEl = document.getElementById('answer-result');
+            const contentEl = document.getElementById('answer-content');
+
+            resultEl.classList.remove('hidden');
+            contentEl.textContent = '正在解析问题...';
+
+            fetch(`http://localhost:5000/api/answer?question=${encodeURIComponent(question)}`)
+                .then(response => response.json())
+                .then(data => {
+                    contentEl.textContent = data.answer || '未找到相关答案';
+                })
+                .catch(error => {
+                    contentEl.textContent = `查询失败：${error.message}`;
+                });
+        });
+
+        // 支持回车键提交
+        document.getElementById('question-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('answer-btn').click();
+            }
+        });
+
+
+        // 搜索功能实现
+        document.getElementById('search-btn').addEventListener('click', performSearch);
+        document.getElementById('entity-search').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // 点击页面其他区域关闭搜索结果
+        document.addEventListener('click', function(e) {
+            const searchContainer = document.getElementById('search-results');
+            const searchInput = document.getElementById('entity-search');
+            const searchBtn = document.getElementById('search-btn');
+
+            if (!searchContainer.contains(e.target) && e.target !== searchInput && e.target !== searchBtn) {
+                searchContainer.classList.add('hidden');
+            }
+        });
+
+        // 执行搜索
+        function performSearch() {
+            const searchTerm = document.getElementById('entity-search').value.trim();
+            if (!searchTerm) return;
+
+            const resultsContainer = document.getElementById('search-results');
+            const resultsList = document.getElementById('results-list');
+            const noResults = document.getElementById('no-results');
+
+            // 显示加载状态
+            resultsList.innerHTML = '<div class="p-4 text-center"><i class="fa fa-spinner fa-spin mr-2"></i>搜索中...</div>';
+            noResults.classList.add('hidden');
+            resultsContainer.classList.remove('hidden');
+
+            // 调用搜索API
+            fetch(`http://localhost:5000/api/search?term=${encodeURIComponent(searchTerm)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP错误，状态码: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.entities && data.entities.length > 0) {
+                        // 显示搜索结果
+                        resultsList.innerHTML = '';
+                        data.entities.forEach(entity => {
+                            const entityColor = entityStyles[entity.label]?.color || '#888888';
+                            const item = document.createElement('div');
+                            item.className = 'p-3 hover:bg-neutral-light rounded-md cursor-pointer transition flex items-center';
+                            item.innerHTML = `
+                                <span class="w-2 h-2 rounded-full mr-2" style="background-color: ${entityColor}"></span>
+                                <div class="flex-1">
+                                    <div class="font-medium">${entity.name}</div>
+                                    <div class="text-xs text-gray-500">${entity.label}</div>
+                                </div>
+                            `;
+                            item.addEventListener('click', () => {
+                                // 点击结果项，加载相关节点
+                                loadEntityAndRelations(entity.id, entity.label);
+                                resultsContainer.classList.add('hidden');
+                                document.getElementById('entity-search').value = '';
+                            });
+                            resultsList.appendChild(item);
+                        });
+                    } else {
+                        // 无结果
+                        resultsList.innerHTML = '';
+                        noResults.classList.remove('hidden');
+                    }
+                })
+                .catch(error => {
+                    console.error('搜索失败:', error);
+                    resultsList.innerHTML = `<div class="p-4 text-center text-red-500">搜索失败: ${error.message}</div>`;
+                });
+        }
+
+        // 加载指定实体及其直接关联节点
+        function loadEntityAndRelations(entityId, entityLabel) {
+            // 显示加载状态
+            document.getElementById('loading-status').classList.remove('hidden');
+            document.getElementById('error-status').classList.add('hidden');
+            document.getElementById('info-panel').classList.add('hidden');
+
+            fetch(`http://localhost:5000/api/entity-relations?id=${encodeURIComponent(entityId)}&label=${encodeURIComponent(entityLabel)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP错误，状态码: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data || !data.nodes || !data.links) {
+                        throw new Error('返回数据格式不正确');
+                    }
+
+                    graphData = data;
+                    updateChart();
+
+                    document.getElementById('total-nodes').textContent = data.nodes.length;
+                    document.getElementById('total-links').textContent = data.links.length;
+
+                    // 自动显示选中节点的信息
+                    const selectedNode = data.nodes.find(n => n.id === entityId);
+                    if (selectedNode) {
+                        showNodeInfo(selectedNode);
+                    }
+                })
+                .catch(error => {
+                    console.error('加载实体关系失败:', error);
+                    document.getElementById('error-status').classList.remove('hidden');
+                    document.getElementById('error-status').innerHTML = `<i class="fa fa-exclamation-circle mr-1"></i>加载失败: ${error.message}`;
+                })
+                .finally(() => {
+                    document.getElementById('loading-status').classList.add('hidden');
+                });
+        }
+        // 加载知识图谱数据
+        function loadKnowledgeGraph() {
+            // 显示加载状态，隐藏错误状态
+            document.getElementById('loading-status').classList.remove('hidden');
+            document.getElementById('error-status').classList.add('hidden');
+            document.getElementById('info-panel').classList.add('hidden');
+
+            // 获取筛选条件
+            const entityTypes = Array.from(document.querySelectorAll('.entity-checkbox:checked'))
+                .map(cb => cb.value);
+            const relationshipTypes = Array.from(document.querySelectorAll('.relationship-checkbox:checked'))
+                .map(cb => cb.value);
+            const nodeCount = document.getElementById('node-count-slider').value;
+
+            // 验证筛选条件 - 至少选择一种实体类型
+            if (entityTypes.length === 0) {
+                document.getElementById('loading-status').classList.add('hidden');
+                return;
+            }
+
+            // 构建查询参数
+            const params = new URLSearchParams();
+            params.append('entityTypes', entityTypes.join(','));
+            params.append('relationshipTypes', relationshipTypes.join(','));
+            params.append('limit', nodeCount);
+
+            // 调用后端API获取数据
+            fetch(`${apiUrl}?${params.toString()}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP错误，状态码: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data || !data.nodes || !data.links) {
+                        throw new Error('API返回数据格式不正确');
+                    }
+
+                    graphData = data;
+                    updateChart();
+
+                    document.getElementById('total-nodes').textContent = data.nodes.length;
+                    document.getElementById('total-links').textContent = data.links.length;
+                })
+                .catch(error => {
+                    console.error('获取数据失败:', error);
+                    document.getElementById('error-status').classList.remove('hidden');
+                    document.getElementById('error-status').innerHTML = `<i class="fa fa-exclamation-circle mr-1"></i>加载失败: ${error.message}`;
+                })
+                .finally(() => {
+                    document.getElementById('loading-status').classList.add('hidden');
+                });
+        }
+        // 更新图表
+        function updateChart() {
+            // 配置ECharts选项
+            const option = {
+                tooltip: {
+                    formatter: function(params) {
+                        return `<div class="font-semibold">${params.data.name}</div>
+                                <div class="text-xs">${params.data.label}</div>`;
+                    }
+                },
+                series: [
+                    {
+                        type: 'graph',
+                        layout: 'force', // 力导向布局
+                        data: graphData.nodes,
+                        links: graphData.links,
+                        roam: true, // 允许缩放和平移
+                        label: {
+                            show: true,
+                            position: 'right',
+                            formatter: '{b}',
+                            fontSize: 12
+                        },
+                        edgeSymbol: graphData.links.length > 0 ? ['none', 'arrow'] : [],
+                        edgeSymbolSize: [0, 8],
+                        edgeLabel: {
+                            fontSize: 10,
+                            formatter: '{c}'
+                        },
+                        force: {
+                            repulsion: 200, // 节点之间的排斥力
+                            edgeLength: 100 // 边的长度
+                        },
+                        emphasis: {
+                            focus: 'adjacency',
+                            lineStyle: {
+                                width: 5
+                            }
+                        },
+                        lineStyle: {
+                            opacity: 0.9,
+                            width: 2,
+                            curveness: 0
+                        }
+                    }
+                ]
+            };
+
+            // 设置图表选项
+            myChart.setOption(option);
+
+            // 添加节点点击事件
+            myChart.on('click', function(params) {
+                if (params.dataType === 'node') {
+                    showNodeInfo(params.data);
+                }
+            });
+        }
+
+        // 显示节点详细信息
+        function showNodeInfo(node) {
+            const infoPanel = document.getElementById('info-panel');
+            const infoTitle = document.getElementById('info-title');
+            const infoContent = document.getElementById('info-content');
+
+            // 设置标题
+            infoTitle.textContent = node.name;
+
+            // 设置内容
+            let contentHtml = `<div class="entity-tag" style="background-color: ${node.itemStyle.color}33; color: ${node.itemStyle.color}">
+                                ${node.label}
+                              </div>`;
+
+            // 根据节点类型显示不同属性
+            if (node.properties) {
+                Object.keys(node.properties).forEach(key => {
+                    if (key !== node.idField && key !== 'name' && node.properties[key]) {
+                        // 处理长文本，如诗文原文
+                        let value = node.properties[key];
+                        // if (value.length > 100) {
+                        //     value = value.substring(0, 100) + '...';
+                        // }
+
+                        contentHtml += `<div>
+                            <span class="font-medium text-gray-700">${formatKeyName(key)}:</span>
+                            <span class="ml-1">${value}</span>
+                        </div>`;
+                    }
+                });
+            }
+
+            infoContent.innerHTML = contentHtml;
+            infoPanel.classList.remove('hidden');
+        }
+
+        // 格式化属性名
+        function formatKeyName(key) {
+            const map = {
+                '时间跨度': '时间跨度',
+                '标题': '标题',
+                '原文': '原文',
+                '名句内容': '名句内容',
+                '形式简介': '形式简介',
+                '主题简介': '主题简介',
+                '简介': '简介',
+                '朝代名称': '朝代名称',
+                '姓名': '姓名',
+                '形式名称': '形式名称',
+                '主题名称': '主题名称'
+            };
+            return map[key] || key;
+        }
+
+        // 响应窗口大小变化
+        window.addEventListener('resize', function() {
+            myChart.resize();
+        });
+
+        // 初始加载知识图谱
+        loadKnowledgeGraph();
+    </script>
+</body>
+</html>
