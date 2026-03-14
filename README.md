@@ -33,51 +33,51 @@
 
 - 只选取节点：以选取“作者”节点为例，系统默认限制节点数量为100，也可以自行调整，点击“查询知识图谱”后，结果如下：
 
-  ![image-20260314195756222](C:\Users\wangjy\AppData\Roaming\Typora\typora-user-images\image-20260314195756222.png)
+  ![image-20260314195756222](/docImages/image-20260314195756222.png)
 
   将光标放在节点上，能看到节点信息
 
-  <img src="C:\Users\wangjy\AppData\Roaming\Typora\typora-user-images\image-20260314195910523.png" alt="image-20260314195910523" style="zoom:50%;" />
+  <img src="/docImages/image-20260314195910523.png" alt="image-20260314195910523" style="zoom:50%;" />
 
 点击节点之后，会在知识图谱上方展示节点的属性信息
 
-<img src="C:\Users\wangjy\AppData\Roaming\Typora\typora-user-images\image-20260314200001964.png" alt="image-20260314200001964" style="zoom: 50%;" />
+<img src="/docImages/image-20260314200001964.png" alt="image-20260314200001964" style="zoom: 50%;" />
 
 系统支持多个仅节点的查询：
 
-![image-20260314200130671](C:\Users\wangjy\AppData\Roaming\Typora\typora-user-images\image-20260314200130671.png)
+![image-20260314200130671](/docImages/image-20260314200130671.png)
 
 - 选取关系：选取某种关系后，与该关系有关的节点自动被选取，点击“查询知识图谱”之后，节点及其关系便可展示到前端
 
-  ![image-20260314200324438](C:\Users\wangjy\AppData\Roaming\Typora\typora-user-images\image-20260314200324438.png)
+  ![image-20260314200324438](/docImages/image-20260314200324438.png)
 
 把鼠标光标放在某一实体上，系统将聚焦于该实体，展示与其有一跳关系的节点
 
-![image-20260314200418328](C:\Users\wangjy\AppData\Roaming\Typora\typora-user-images\image-20260314200418328.png)
+![image-20260314200418328](/docImages/image-20260314200418328.png)
 
 在页面左下角，系统还展示了当前画面的节点数量和关系数量，本系统目前最多包含1400多个节点和6000多条关系，但为了美观，仅支持拉取节点数量到1000
 
-![image-20260314200521811](C:\Users\wangjy\AppData\Roaming\Typora\typora-user-images\image-20260314200521811.png)
+![image-20260314200521811](/docImages\image-20260314200521811.png)
 
 ### 2. 自然语言智能问答
 
 - 支持用户以自然语言提问古诗文相关问题（如：*苏轼写过哪些关于送别的作品*），调用LLM API解析为Cypher语句之后，在数据库里面查询，并把结果渲染到前端
 
-  <img src="C:\Users\wangjy\AppData\Roaming\Typora\typora-user-images\image-20260314200744352.png" alt="image-20260314200744352" style="zoom:67%;" />
+  <img src="/docImages/image-20260314200744352.png" alt="image-20260314200744352" style="zoom:67%;" />
 
   若用户输入的语句不符合本系统要求，系统也会返回以下用户友好信息
 
-  <img src="C:\Users\wangjy\AppData\Roaming\Typora\typora-user-images\image-20260314200922354.png" alt="image-20260314200922354" style="zoom: 67%;" />
+  <img src="/docImages/image-20260314200922354.png" alt="image-20260314200922354" style="zoom: 67%;" />
 
 ### 3. 实体关键词搜索
 
 - 支持模糊搜索：输入关键词可匹配所有实体的核心属性（如作者姓名/简介、诗文标题/原文、名句内容等）
 
-  ![image-20260314201041948](C:\Users\wangjy\AppData\Roaming\Typora\typora-user-images\image-20260314201041948.png)
+  ![image-20260314201041948](/docImages/image-20260314201041948.png)
 
 - 搜索结果以候选栏展示，点击选中实体后，自动展示该实体的详细属性及所有直接关联的节点与关系
 
-<img src="C:\Users\wangjy\AppData\Roaming\Typora\typora-user-images\image-20260314201112559.png" alt="image-20260314201112559" style="zoom:67%;" />
+<img src="/docImages/image-20260314201112559.png" alt="image-20260314201112559" style="zoom:67%;" />
 
 ## 技术栈
 
