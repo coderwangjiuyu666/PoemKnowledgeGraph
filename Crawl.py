@@ -30,7 +30,7 @@ FORMS = ["诗", "词", "曲", "其他"]
 # 1.3 初始化OpenAI客户端（文档指定API信息）
 client = OpenAI(
     base_url="https://ark.cn-beijing.volces.com/api/v3",  # 文档指定API URL
-    api_key=os.environ.get("ARK_API_KEY") or "02b95db9-3477-4c63-8918-ec1c0edfa2d8",  # 兼容环境变量与文档Key
+    api_key=os.environ.get("ARK_API_KEY") ,  # 兼容环境变量与文档Key
 )
 
 # 1.4 知识图谱表格初始化（作者实体表移除“字/号”，文档要求）
